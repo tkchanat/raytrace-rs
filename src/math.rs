@@ -41,6 +41,22 @@ impl Vec3 {
     pub fn from(e0: f64, e1: f64, e2: f64) -> Self {
         Vec3(e0, e1, e2)
     }
+    pub fn random() -> Self {
+        Vec3(random_double(), random_double(), random_double())
+    }
+    pub fn random_range(min: f64, max: f64) -> Self {
+        Vec3(
+            random_range_double(min, max),
+            random_range_double(min, max),
+            random_range_double(min, max),
+        )
+    }
+    pub fn random_unit_vector() -> Self {
+        let a = random_range_double(0.0, 2.0 * PI);
+        let z = random_range_double(-1.0, 1.0);
+        let r = (1.0 - z * z).sqrt();
+        Vec3(r * a.cos(), r * a.sin(), z)
+    }
     pub fn x(&self) -> f64 {
         self.0
     }

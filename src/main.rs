@@ -9,6 +9,7 @@ const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const IMAGE_WIDTH: i32 = 400;
 const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as i32;
 const SAMPLES_PER_PIXEL: i32 = 32;
+const MAX_DEPTH: i32 = 16;
 
 struct Camera {
     origin: Point3,
@@ -43,19 +44,23 @@ impl Camera {
 
 fn write_color(color: &Color, samples_per_pixel: i32) {
     let scale = 1.0 / samples_per_pixel as f64;
-    let r = 255.0 * clamp(color.x() * scale, 0.0, 1.0);
-    let g = 255.0 * clamp(color.y() * scale, 0.0, 1.0);
-    let b = 255.0 * clamp(color.z() * scale, 0.0, 1.0);
+    let r = 255.0 * clamp((color.x() * scale).sqrt(), 0.0, 1.0);
+    let g = 255.0 * clamp((color.y() * scale).sqrt(), 0.0, 1.0);
+    let b = 255.0 * clamp((color.z() * scale).sqrt(), 0.0, 1.0);
     println!("{} {} {}", r as i32, g as i32, b as i32);
 }
 
-fn ray_color<T>(ray: &Ray, world: &HittableList<T>) -> Color
+fn ray_color<T>(ray: &Ray, world: &HittableList<T>, depth: i32) -> Color
 where
     T: Hittable,
 {
+    if depth <= 0 {
+        return Color::new();
+    }
     let mut hit = RayHit::new();
-    if world.hit(ray, 0.0, INIFINITY, &mut hit) {
-        return (hit.normal + Color::from(1.0, 1.0, 1.0)) * 0.5;
+    if world.hit(ray, 0.001, INIFINITY, &mut hit) {
+        let target = hit.p + hit.normal + Vec3::random_unit_vector();
+        return ray_color(&Ray::from(hit.p, target - hit.p), world, depth - 1) * 0.5;
     }
     let unit_direction = normalize(ray.direction());
     let t = 0.5 * (unit_direction.y() + 1.0);
@@ -84,7 +89,7 @@ fn main() {
                 let u = (i as f64 + random_double()) / (IMAGE_WIDTH - 1) as f64;
                 let v = (j as f64 + random_double()) / (IMAGE_HEIGHT - 1) as f64;
                 let ray = camera.get_ray(u, v);
-                pixel_color = pixel_color + ray_color(&ray, &world);
+                pixel_color = pixel_color + ray_color(&ray, &world, MAX_DEPTH);
             }
             write_color(&pixel_color, SAMPLES_PER_PIXEL);
         }
