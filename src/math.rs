@@ -1,3 +1,6 @@
+extern crate rand;
+use rand::prelude::*;
+use std::cmp::PartialOrd;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
 // Constants
@@ -7,6 +10,22 @@ pub const PI: f64 = std::f64::consts::PI;
 // Utility Functions
 pub fn degrees_to_radians(degrees: f64) -> f64 {
     return degrees * PI / 180.0;
+}
+pub fn random_double() -> f64 {
+    // Returns a random real in [0,1).
+    return rand::random();
+}
+pub fn random_range_double(min: f64, max: f64) -> f64 {
+    // Returns a random real in [min,max).
+    return min + (max - min) * random_double();
+}
+pub fn clamp<T: PartialOrd>(input: T, min: T, max: T) -> T {
+    if input > max {
+        return max;
+    } else if input < min {
+        return min;
+    }
+    input
 }
 
 // Vector3
@@ -45,7 +64,11 @@ pub fn dot(u: &Vec3, v: &Vec3) -> f64 {
     u.0 * v.0 + u.1 * v.1 + u.2 * v.2
 }
 pub fn cross(u: &Vec3, v: &Vec3) -> Vec3 {
-    Vec3(u.1 * v.2 - u.2 * v.1, u.2 * v.0 - u.0 * v.2, u.0 * v.1 - u.1 * v.0)
+    Vec3(
+        u.1 * v.2 - u.2 * v.1,
+        u.2 * v.0 - u.0 * v.2,
+        u.0 * v.1 - u.1 * v.0,
+    )
 }
 impl Add for Vec3 {
     type Output = Vec3;
