@@ -1,5 +1,7 @@
+mod geometry;
 mod math;
 mod ray;
+use geometry::*;
 use math::*;
 use ray::*;
 
@@ -12,27 +14,15 @@ fn write_color(color: &Color) {
     );
 }
 
-fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> f64 {
-    let oc = *ray.origin() - center;
-    let a = ray.direction().length_squared();
-    let half_b = dot(&oc, ray.direction());
-    let c = oc.length_squared() - radius * radius;
-    let discriminant = half_b * half_b - a * c;
-    if discriminant < 0.0 {
-        return -1.0;
-    } else {
-        return (-half_b - discriminant.sqrt()) / a;
+fn ray_color<T>(ray: &Ray, world: &HittableList<T>) -> Color
+where
+    T: Hittable,
+{
+    let mut hit = RayHit::new();
+    if world.hit(ray, 0.0, INIFINITY, &mut hit) {
+        return (hit.normal + Color::from(1.0, 1.0, 1.0)) * 0.5;
     }
-}
-
-fn ray_color(r: Ray) -> Color {
-    let sphere_position = Point3::from(0.0, 0.0, -1.0);
-    let t = hit_sphere(sphere_position, 0.5, &r);
-    if t > 0.0 {
-        let normal = normalize(&(r.at(t) - sphere_position));
-        return Color::from(normal.x() + 1.0, normal.y() + 1.0, normal.z() + 1.0) / 2.0;
-    }
-    let unit_direction = normalize(r.direction());
+    let unit_direction = normalize(ray.direction());
     let t = 0.5 * (unit_direction.y() + 1.0);
     return Color::from(1.0, 1.0, 1.0) * (1.0 - t) + Color::from(0.5, 0.7, 1.0) * t;
 }
@@ -45,6 +35,11 @@ fn main() {
     println!("P3");
     println!("{} {}", IMAGE_WIDTH, IMAGE_HEIGHT);
     println!("255");
+
+    // World
+    let mut world = HittableList::new();
+    world.add(Sphere::from(Point3::from(0.0, 0.0, -1.0), 0.5));
+    world.add(Sphere::from(Point3::from(0.0, -100.5, -1.0), 100.0));
 
     // Camera
     let viewport_height = 2.0;
@@ -65,7 +60,7 @@ fn main() {
                 origin,
                 lower_left_corner + horizontal * u + vertical * v - origin,
             );
-            let pixel_color = ray_color(ray);
+            let pixel_color = ray_color(&ray, &world);
             write_color(&pixel_color);
         }
     }

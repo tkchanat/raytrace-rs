@@ -1,5 +1,14 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
+// Constants
+pub const INIFINITY: f64 = std::f64::INFINITY;
+pub const PI: f64 = std::f64::consts::PI;
+
+// Utility Functions
+pub fn degrees_to_radians(degrees: f64) -> f64 {
+    return degrees * PI / 180.0;
+}
+
 // Vector3
 #[derive(Debug, Copy, Clone)]
 pub struct Vec3(f64, f64, f64);
