@@ -12,18 +12,25 @@ fn write_color(color: &Color) {
     );
 }
 
-fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> bool {
+fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> f64 {
     let oc = *ray.origin() - center;
     let a = dot(ray.direction(), ray.direction());
     let b = 2.0 * dot(&oc, ray.direction());
     let c = dot(&oc, &oc) - radius * radius;
     let discriminant = b * b - 4.0 * a * c;
-    return discriminant > 0.0;
+    if discriminant < 0.0 {
+        return -1.0;
+    } else {
+        return (-b - discriminant.sqrt()) / (2.0 * a);
+    }
 }
 
 fn ray_color(r: Ray) -> Color {
-    if hit_sphere(Point3::from(0.0, 0.0, -1.0), 0.5, &r) {
-        return Color::from(1.0, 0.0, 0.0);
+    let sphere_position = Point3::from(0.0, 0.0, -1.0);
+    let t = hit_sphere(sphere_position, 0.5, &r);
+    if t > 0.0 {
+        let normal = normalize(&(r.at(t) - sphere_position));
+        return Color::from(normal.x() + 1.0, normal.y() + 1.0, normal.z() + 1.0) / 2.0;
     }
     let unit_direction = normalize(r.direction());
     let t = 0.5 * (unit_direction.y() + 1.0);
