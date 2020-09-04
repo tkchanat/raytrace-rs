@@ -1,24 +1,18 @@
-use crate::math::*;
-use crate::ray::*;
+use crate::{material::*, math::*, ray::*};
 
 // Sphere
-pub struct Sphere {
+pub struct Sphere<'a> {
     center: Point3,
     radius: f64,
+    material: &'a dyn Material,
 }
-impl Sphere {
-    pub fn new() -> Self {
-        Sphere {
-            center: Point3::new(),
-            radius: 1.0,
-        }
-    }
-    pub fn from(center: Point3, radius: f64) -> Self {
-        Sphere { center, radius }
+impl<'a> Sphere<'a> {
+    pub fn from(center: Point3, radius: f64, material: &'a dyn Material) -> Self {
+        Sphere { center, radius, material }
     }
 }
-impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, hit: &mut RayHit) -> bool {
+impl<'a> Hittable for Sphere<'a> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit> {
         let oc = *ray.origin() - self.center;
         let a = ray.direction().length_squared();
         let half_b = dot(&oc, ray.direction());
@@ -27,19 +21,31 @@ impl Hittable for Sphere {
         if discriminant > 0.0 {
             let alpha = (-half_b - discriminant.sqrt()) / a;
             if alpha < t_max && alpha > t_min {
-                hit.t = alpha;
-                hit.p = ray.at(hit.t);
-                hit.set_face_normal(ray, &normalize(&(hit.p - self.center)));
-                return true;
+                let distance = alpha;
+                let point = ray.at(distance);
+                let outward_normal = normalize(&(point - self.center));
+                let normal = -outward_normal * dot(ray.direction(), &outward_normal).signum();
+                return Some(RayHit {
+                    point,
+                    distance,
+                    material: self.material,
+                    normal,
+                });
             }
             let beta = (-half_b + discriminant.sqrt()) / a;
             if beta < t_max && beta > t_min {
-                hit.t = beta;
-                hit.p = ray.at(hit.t);
-                hit.set_face_normal(ray, &normalize(&(hit.p - self.center)));
-                return true;
+                let distance = beta;
+                let point = ray.at(distance);
+                let outward_normal = normalize(&(point - self.center));
+                let normal = -outward_normal * dot(ray.direction(), &outward_normal).signum();
+                return Some(RayHit {
+                    point,
+                    distance,
+                    material: self.material,
+                    normal,
+                });
             }
         }
-        false
+        None
     }
 }

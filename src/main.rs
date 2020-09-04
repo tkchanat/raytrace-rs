@@ -1,7 +1,9 @@
 mod geometry;
+mod material;
 mod math;
 mod ray;
 use geometry::*;
+use material::*;
 use math::*;
 use ray::*;
 
@@ -9,7 +11,7 @@ const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const IMAGE_WIDTH: i32 = 400;
 const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as i32;
 const SAMPLES_PER_PIXEL: i32 = 32;
-const MAX_DEPTH: i32 = 16;
+const MAX_DEPTH: i32 = 50;
 
 struct Camera {
     origin: Point3,
@@ -35,7 +37,7 @@ impl Camera {
         }
     }
     fn get_ray(&self, u: f64, v: f64) -> Ray {
-        Ray::from(
+        Ray::new(
             self.origin,
             self.lower_left_corner + self.horizontal * u + self.vertical * v - self.origin,
         )
@@ -55,12 +57,11 @@ where
     T: Hittable,
 {
     if depth <= 0 {
-        return Color::new();
+        return Color::BLACK;
     }
-    let mut hit = RayHit::new();
-    if world.hit(ray, 0.001, INIFINITY, &mut hit) {
-        let target = hit.p + hit.normal + Vec3::random_unit_vector();
-        return ray_color(&Ray::from(hit.p, target - hit.p), world, depth - 1) * 0.5;
+    if let Some(hit) = world.hit(ray, 0.001, INIFINITY) {
+        let (scattered, attenuation) = hit.material.scatter(ray, &hit);
+        return attenuation * ray_color(&scattered, world, depth - 1);
     }
     let unit_direction = normalize(ray.direction());
     let t = 0.5 * (unit_direction.y() + 1.0);
@@ -75,8 +76,20 @@ fn main() {
 
     // World
     let mut world = HittableList::new();
-    world.add(Sphere::from(Point3::from(0.0, 0.0, -1.0), 0.5));
-    world.add(Sphere::from(Point3::from(0.0, -100.5, -1.0), 100.0));
+    let material_ground = Lambertian::new(Color::from(0.5, 0.5, 0.5));
+    let material_center = Lambertian::new(Color::from(0.5, 0.5, 0.5));
+    // let material_left   = Metal(color(0.8, 0.8, 0.8));
+    // let material_right  = Metal(color(0.8, 0.6, 0.2));
+    world.add(Sphere::from(
+        Point3::from(0.0, 0.0, -1.0),
+        0.5,
+        &material_center,
+    ));
+    world.add(Sphere::from(
+        Point3::from(0.0, -100.5, -1.0),
+        100.0,
+        &material_ground,
+    ));
 
     // Camera
     let camera = Camera::new();
@@ -84,7 +97,7 @@ fn main() {
     // Render
     for j in (0..IMAGE_HEIGHT).rev() {
         for i in 0..IMAGE_WIDTH {
-            let mut pixel_color = Color::new();
+            let mut pixel_color = Color::BLACK;
             for _ in 0..SAMPLES_PER_PIXEL {
                 let u = (i as f64 + random_double()) / (IMAGE_WIDTH - 1) as f64;
                 let v = (j as f64 + random_double()) / (IMAGE_HEIGHT - 1) as f64;

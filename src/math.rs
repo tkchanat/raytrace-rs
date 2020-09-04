@@ -1,5 +1,3 @@
-extern crate rand;
-use rand::prelude::*;
 use std::cmp::PartialOrd;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
@@ -35,8 +33,12 @@ pub use Vec3 as Color;
 pub use Vec3 as Point3;
 
 impl Vec3 {
-    pub fn new() -> Self {
-        Vec3(0.0, 0.0, 0.0)
+    // Constants
+    pub const BLACK: Color = Color(0.0, 0.0, 0.0);
+    pub const WHITE: Color = Color(1.0, 1.0, 1.0);
+
+    pub fn new(r: f64, g: f64, b: f64) -> Self {
+        Vec3(r, g, b)
     }
     pub fn from(e0: f64, e1: f64, e2: f64) -> Self {
         Vec3(e0, e1, e2)
@@ -51,11 +53,27 @@ impl Vec3 {
             random_range_double(min, max),
         )
     }
+    pub fn random_in_unit_sphere() -> Self {
+        let mut p = Vec3::random_range(-1.0, 1.0);
+        while p.length_squared() < 1.0 {
+            p = Vec3::random_range(-1.0, 1.0);
+        }
+        p
+    }
     pub fn random_unit_vector() -> Self {
         let a = random_range_double(0.0, 2.0 * PI);
         let z = random_range_double(-1.0, 1.0);
         let r = (1.0 - z * z).sqrt();
         Vec3(r * a.cos(), r * a.sin(), z)
+    }
+    pub fn random_in_hemisphere(normal: &Vec3) -> Self {
+        let in_unit_sphere = Vec3::random_in_unit_sphere();
+        // In the same hemisphere as the normal
+        if dot(&in_unit_sphere, normal) > 0.0 {
+            return in_unit_sphere;
+        } else {
+            return -in_unit_sphere;
+        }
     }
     pub fn x(&self) -> f64 {
         self.0
