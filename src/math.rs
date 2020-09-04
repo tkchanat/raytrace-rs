@@ -104,6 +104,9 @@ pub fn cross(u: &Vec3, v: &Vec3) -> Vec3 {
         u.0 * v.1 - u.1 * v.0,
     )
 }
+pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
+    *v - *n * dot(v, n) * 2.0
+}
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(self, v: Vec3) -> Vec3 {

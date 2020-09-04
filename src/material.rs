@@ -2,7 +2,7 @@ use crate::{math::*, ray::*};
 
 // Traits
 pub trait Material {
-    fn scatter(&self, ray: &Ray, hit: &RayHit) -> (Ray, Color);
+    fn scatter(&self, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)>;
 }
 
 // Lambertian
@@ -15,10 +15,32 @@ impl Lambertian {
     }
 }
 impl Material for Lambertian {
-    fn scatter(&self, ray: &Ray, hit: &RayHit) -> (Ray, Color) {
+    fn scatter(&self, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)> {
         let scatter_direction = hit.normal + Vec3::random_unit_vector();
         let scattered = Ray::new(hit.point, scatter_direction);
         let attenuation = self.albedo;
-        (scattered, attenuation)
+        Some((scattered, attenuation))
+    }
+}
+
+// Metal
+pub struct Metal {
+    albedo: Color,
+}
+impl Metal {
+    pub fn new(albedo: Color) -> Self {
+        Metal { albedo }
+    }
+}
+impl Material for Metal {
+    fn scatter(&self, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)> {
+        let reflected = reflect(&normalize(ray.direction()), &hit.normal);
+        let scattered = Ray::new(hit.point, reflected);
+        let attenuation = self.albedo;
+        if dot(scattered.direction(), &hit.normal) > 0.0 {
+            Some((scattered, attenuation))
+        } else {
+            None
+        }
     }
 }

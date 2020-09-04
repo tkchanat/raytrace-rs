@@ -60,8 +60,10 @@ where
         return Color::BLACK;
     }
     if let Some(hit) = world.hit(ray, 0.001, INIFINITY) {
-        let (scattered, attenuation) = hit.material.scatter(ray, &hit);
-        return attenuation * ray_color(&scattered, world, depth - 1);
+        if let Some((scattered, attenuation)) = hit.material.scatter(ray, &hit) {
+            return attenuation * ray_color(&scattered, world, depth - 1);
+        }
+        return Color::BLACK;
     }
     let unit_direction = normalize(ray.direction());
     let t = 0.5 * (unit_direction.y() + 1.0);
@@ -76,14 +78,24 @@ fn main() {
 
     // World
     let mut world = HittableList::new();
-    let material_ground = Lambertian::new(Color::from(0.5, 0.5, 0.5));
-    let material_center = Lambertian::new(Color::from(0.5, 0.5, 0.5));
-    // let material_left   = Metal(color(0.8, 0.8, 0.8));
-    // let material_right  = Metal(color(0.8, 0.6, 0.2));
+    let material_ground = Lambertian::new(Color::from(0.8, 0.8, 0.0));
+    let material_center = Lambertian::new(Color::from(0.7, 0.3, 0.3));
+    let material_left = Metal::new(Color::from(0.8, 0.8, 0.8));
+    let material_right = Metal::new(Color::from(0.8, 0.6, 0.2));
     world.add(Sphere::from(
         Point3::from(0.0, 0.0, -1.0),
         0.5,
         &material_center,
+    ));
+    world.add(Sphere::from(
+        Point3::from(-1.0, 0.0, -1.0),
+        0.5,
+        &material_left,
+    ));
+    world.add(Sphere::from(
+        Point3::from(1.0, 0.0, -1.0),
+        0.5,
+        &material_right,
     ));
     world.add(Sphere::from(
         Point3::from(0.0, -100.5, -1.0),
