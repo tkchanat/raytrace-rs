@@ -26,16 +26,17 @@ impl Material for Lambertian {
 // Metal
 pub struct Metal {
     albedo: Color,
+    roughness: f64,
 }
 impl Metal {
-    pub fn new(albedo: Color) -> Self {
-        Metal { albedo }
+    pub fn new(albedo: Color, roughness: f64) -> Self {
+        Metal { albedo, roughness }
     }
 }
 impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)> {
         let reflected = reflect(&normalize(ray.direction()), &hit.normal);
-        let scattered = Ray::new(hit.point, reflected);
+        let scattered = Ray::new(hit.point, reflected + Vec3::random_in_unit_sphere() * self.roughness);
         let attenuation = self.albedo;
         if dot(scattered.direction(), &hit.normal) > 0.0 {
             Some((scattered, attenuation))
