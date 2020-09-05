@@ -76,6 +76,21 @@ impl Vec3 {
             return -in_unit_sphere;
         }
     }
+    pub fn random_in_unit_disk() -> Self {
+        let mut p = Vec3::new(
+            random_range_double(-1.0, 1.0),
+            random_range_double(-1.0, 1.0),
+            0.0,
+        );
+        while p.length_squared() < 1.0 {
+            p = Vec3::new(
+                random_range_double(-1.0, 1.0),
+                random_range_double(-1.0, 1.0),
+                0.0,
+            );
+        }
+        p
+    }
     pub fn x(&self) -> f64 {
         self.0
     }
