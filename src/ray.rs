@@ -31,6 +31,7 @@ pub struct RayHit<'a> {
     pub distance: f64,
     pub material: &'a dyn Material,
     pub normal: Vec3,
+    pub front_face: bool
 }
 
 // HittableList

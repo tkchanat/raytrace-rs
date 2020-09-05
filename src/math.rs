@@ -107,6 +107,14 @@ pub fn cross(u: &Vec3, v: &Vec3) -> Vec3 {
 pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
     *v - *n * dot(v, n) * 2.0
 }
+pub fn refract(v: &Vec3, n: &Vec3, etai_over_etat: f64) -> Vec3 {
+    let cos_theta = dot(&(-*v), n);
+    let r_out_perp = (*v + *n * cos_theta) * etai_over_etat;
+    let r_out_parallel = *n * -((1.0 - r_out_perp.length_squared()).abs()).sqrt();
+    let refracted = r_out_perp + r_out_parallel;
+    refracted
+}
+
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(self, v: Vec3) -> Vec3 {

@@ -8,7 +8,11 @@ pub struct Sphere<'a> {
 }
 impl<'a> Sphere<'a> {
     pub fn from(center: Point3, radius: f64, material: &'a dyn Material) -> Self {
-        Sphere { center, radius, material }
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 }
 impl<'a> Hittable for Sphere<'a> {
@@ -24,12 +28,18 @@ impl<'a> Hittable for Sphere<'a> {
                 let distance = alpha;
                 let point = ray.at(distance);
                 let outward_normal = normalize(&(point - self.center));
-                let normal = -outward_normal * dot(ray.direction(), &outward_normal).signum();
+                let front_face = dot(ray.direction(), &outward_normal) < 0.0;
+                let normal = if front_face {
+                    outward_normal
+                } else {
+                    -outward_normal
+                };
                 return Some(RayHit {
                     point,
                     distance,
                     material: self.material,
                     normal,
+                    front_face,
                 });
             }
             let beta = (-half_b + discriminant.sqrt()) / a;
@@ -37,12 +47,18 @@ impl<'a> Hittable for Sphere<'a> {
                 let distance = beta;
                 let point = ray.at(distance);
                 let outward_normal = normalize(&(point - self.center));
-                let normal = -outward_normal * dot(ray.direction(), &outward_normal).signum();
+                let front_face = dot(ray.direction(), &outward_normal) < 0.0;
+                let normal = if front_face {
+                    outward_normal
+                } else {
+                    -outward_normal
+                };
                 return Some(RayHit {
                     point,
                     distance,
                     material: self.material,
                     normal,
+                    front_face,
                 });
             }
         }
