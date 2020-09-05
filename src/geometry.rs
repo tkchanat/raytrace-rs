@@ -7,7 +7,7 @@ pub struct Sphere<'a> {
     material: &'a dyn Material,
 }
 impl<'a> Sphere<'a> {
-    pub fn from(center: Point3, radius: f64, material: &'a dyn Material) -> Self {
+    pub fn new(center: Point3, radius: f64, material: &'a dyn Material) -> Self {
         Sphere {
             center,
             radius,

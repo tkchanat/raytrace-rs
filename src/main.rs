@@ -20,15 +20,20 @@ struct Camera {
     vertical: Vec3,
 }
 impl Camera {
-    fn new() -> Self {
-        const VIEWPORT_WIDTH: f64 = ASPECT_RATIO * VIEWPORT_HEIGHT;
-        const VIEWPORT_HEIGHT: f64 = 2.0;
-        const FOCAL_LENGTH: f64 = 1.0;
-        let origin = Point3::from(0.0, 0.0, 0.0);
-        let horizontal = Vec3::from(VIEWPORT_WIDTH, 0.0, 0.0);
-        let vertical = Vec3::from(0.0, VIEWPORT_HEIGHT, 0.0);
-        let lower_left_corner =
-            origin - horizontal / 2.0 - vertical / 2.0 - Vec3::from(0.0, 0.0, FOCAL_LENGTH);
+    fn new(look_from: Point3, look_at: Point3, up: Vec3, fov: f64, aspect_ratio: f64) -> Self {
+        let theta = degrees_to_radians(fov);
+        let h = (theta / 2.0).tan();
+        let viewport_height = 2.0 * h;
+        let viewport_width = aspect_ratio * viewport_height;
+
+        let w = normalize(&(look_from - look_at));
+        let u = normalize(&cross(&up, &w));
+        let v = cross(&w, &u);
+
+        let origin = look_from;
+        let horizontal = u * viewport_width;
+        let vertical = v * viewport_height;
+        let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - w;
         Camera {
             origin,
             lower_left_corner,
@@ -36,10 +41,10 @@ impl Camera {
             vertical,
         }
     }
-    fn get_ray(&self, u: f64, v: f64) -> Ray {
+    fn get_ray(&self, s: f64, t: f64) -> Ray {
         Ray::new(
             self.origin,
-            self.lower_left_corner + self.horizontal * u + self.vertical * v - self.origin,
+            self.lower_left_corner + self.horizontal * s + self.vertical * t - self.origin,
         )
     }
 }
@@ -82,34 +87,40 @@ fn main() {
     let material_center = Lambertian::new(Color::from(0.1, 0.2, 0.5));
     let material_left = Dielectric::new(1.5);
     let material_right = Metal::new(Color::from(0.8, 0.6, 0.2), 0.0);
-    world.add(Sphere::from(
+    world.add(Sphere::new(
         Point3::from(0.0, 0.0, -1.0),
         0.5,
         &material_center,
     ));
-    world.add(Sphere::from(
+    world.add(Sphere::new(
         Point3::from(-1.0, 0.0, -1.0),
         0.5,
         &material_left,
     ));
-    world.add(Sphere::from(
+    world.add(Sphere::new(
         Point3::from(-1.0, 0.0, -1.0),
         -0.45,
         &material_left,
     ));
-    world.add(Sphere::from(
+    world.add(Sphere::new(
         Point3::from(1.0, 0.0, -1.0),
         0.5,
         &material_right,
     ));
-    world.add(Sphere::from(
+    world.add(Sphere::new(
         Point3::from(0.0, -100.5, -1.0),
         100.0,
         &material_ground,
     ));
 
     // Camera
-    let camera = Camera::new();
+    let camera = Camera::new(
+        Point3::new(-2.0, 2.0, 1.0),
+        Point3::new(0.0, 0.0, -1.0),
+        Vec3::UP,
+        20.0,
+        ASPECT_RATIO,
+    );
 
     // Render
     for j in (0..IMAGE_HEIGHT).rev() {
