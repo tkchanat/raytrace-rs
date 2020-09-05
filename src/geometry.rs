@@ -27,7 +27,7 @@ impl<'a> Hittable for Sphere<'a> {
             if alpha < t_max && alpha > t_min {
                 let distance = alpha;
                 let point = ray.at(distance);
-                let outward_normal = normalize(&(point - self.center));
+                let outward_normal = (point - self.center) / self.radius;
                 let front_face = dot(ray.direction(), &outward_normal) < 0.0;
                 let normal = if front_face {
                     outward_normal
@@ -46,7 +46,7 @@ impl<'a> Hittable for Sphere<'a> {
             if beta < t_max && beta > t_min {
                 let distance = beta;
                 let point = ray.at(distance);
-                let outward_normal = normalize(&(point - self.center));
+                let outward_normal = (point - self.center) / self.radius;
                 let front_face = dot(ray.direction(), &outward_normal) < 0.0;
                 let normal = if front_face {
                     outward_normal

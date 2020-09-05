@@ -70,7 +70,13 @@ impl Material for Dielectric {
 
         let cos_theta = dot(&(-unit_direction), &hit.normal).min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+        let reflect_prob = schlick(cos_theta, etai_over_etat);
+        // Total Internal Reflection
         if etai_over_etat * sin_theta > 1.0 {
+            let reflected = reflect(&unit_direction, &hit.normal);
+            let scattered = Ray::new(hit.point, reflected);
+            Some((scattered, attenuation))
+        } else if random_double() < reflect_prob {
             let reflected = reflect(&unit_direction, &hit.normal);
             let scattered = Ray::new(hit.point, reflected);
             Some((scattered, attenuation))

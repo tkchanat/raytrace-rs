@@ -114,6 +114,11 @@ pub fn refract(v: &Vec3, n: &Vec3, etai_over_etat: f64) -> Vec3 {
     let refracted = r_out_perp + r_out_parallel;
     refracted
 }
+pub fn schlick(cosine: f64, refractive_index: f64) -> f64 {
+    let r0 = (1.0 - refractive_index) / (1.0 + refractive_index);
+    let r0 = r0 * r0;
+    r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
+}
 
 impl Add for Vec3 {
     type Output = Vec3;

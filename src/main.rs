@@ -79,9 +79,9 @@ fn main() {
     // World
     let mut world = HittableList::new();
     let material_ground = Lambertian::new(Color::from(0.8, 0.8, 0.0));
-    let material_center = Lambertian::new(Color::from(0.7, 0.3, 0.3));
+    let material_center = Lambertian::new(Color::from(0.1, 0.2, 0.5));
     let material_left = Dielectric::new(1.5);
-    let material_right = Metal::new(Color::from(0.8, 0.6, 0.2), 1.0);
+    let material_right = Metal::new(Color::from(0.8, 0.6, 0.2), 0.0);
     world.add(Sphere::from(
         Point3::from(0.0, 0.0, -1.0),
         0.5,
@@ -90,6 +90,11 @@ fn main() {
     world.add(Sphere::from(
         Point3::from(-1.0, 0.0, -1.0),
         0.5,
+        &material_left,
+    ));
+    world.add(Sphere::from(
+        Point3::from(-1.0, 0.0, -1.0),
+        -0.45,
         &material_left,
     ));
     world.add(Sphere::from(
