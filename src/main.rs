@@ -8,10 +8,10 @@ use math::*;
 use ray::*;
 use std::sync::Arc;
 
-const ASPECT_RATIO: f64 = 16.0 / 9.0;
+const ASPECT_RATIO: f64 = 3.0 / 2.0;
 const IMAGE_WIDTH: i32 = 400;
 const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as i32;
-const SAMPLES_PER_PIXEL: i32 = 32;
+const SAMPLES_PER_PIXEL: i32 = 64;
 const MAX_DEPTH: i32 = 8;
 
 struct Camera {
@@ -24,8 +24,8 @@ struct Camera {
     w: Vec3,
     lens_radius: f64,
 }
-unsafe impl Sync for Camera {}
-unsafe impl Send for Camera {}
+// unsafe impl Sync for Camera {}
+// unsafe impl Send for Camera {}
 impl Camera {
     fn new(
         look_from: Point3,
@@ -164,18 +164,18 @@ fn main() {
     println!("255");
 
     // World
-    let world = std::sync::Arc::new(random_scene());
+    let world = Arc::new(random_scene());
 
     // Camera
-    let look_from = Point3::new(-1.0, 1.0, 0.0);
-    let look_at = Point3::new(0.0, 0.0, -1.0);
+    let look_from = Point3::new(13.0, 2.0, 3.0);
+    let look_at = Point3::new(0.0, 0.0, 0.0);
     let focus_distance = 10.0;
-    let aperture = 0.0;
-    let camera = std::sync::Arc::new(Camera::new(
+    let aperture = 0.1;
+    let camera = Arc::new(Camera::new(
         look_from,
         look_at,
         Vec3::UP,
-        60.0,
+        20.0,
         ASPECT_RATIO,
         aperture,
         focus_distance,

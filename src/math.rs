@@ -82,7 +82,7 @@ impl Vec3 {
             random_range_double(-1.0, 1.0),
             0.0,
         );
-        while p.length_squared() < 1.0 {
+        while p.length_squared() > 1.0 {
             p = Vec3::new(
                 random_range_double(-1.0, 1.0),
                 random_range_double(-1.0, 1.0),
