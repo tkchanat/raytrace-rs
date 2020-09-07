@@ -1,19 +1,24 @@
-use crate::{material::*, math::*};
+use crate::{aabb::*, material::*, math::*};
 
 // Traits
 pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit>;
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
 
 // Ray
 pub struct Ray {
     orig: Point3,
     dir: Vec3,
-    time: f64
+    time: f64,
 }
 impl Ray {
-    pub fn new(orig: Point3, dir: Vec3, time: f64) -> Self {
-        Ray { orig, dir, time }
+    pub fn new(orig: Point3, dir: Vec3, time: Option<f64>) -> Self {
+        Ray {
+            orig,
+            dir,
+            time: time.unwrap_or_default(),
+        }
     }
     pub fn origin(&self) -> &Point3 {
         &self.orig
@@ -21,7 +26,9 @@ impl Ray {
     pub fn direction(&self) -> &Point3 {
         &self.dir
     }
-    pub fn time(&self) -> f64 { self.time }
+    pub fn time(&self) -> f64 {
+        self.time
+    }
     pub fn at(&self, t: f64) -> Point3 {
         self.orig + self.dir * t
     }
@@ -33,7 +40,7 @@ pub struct RayHit<'a> {
     pub distance: f64,
     pub material: &'a dyn Material,
     pub normal: Vec3,
-    pub front_face: bool
+    pub front_face: bool,
 }
 
 // HittableList
@@ -62,5 +69,25 @@ impl HittableList {
             }
         }
         closest_hit
+    }
+    pub fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        if self.objects.is_empty() {
+            return None;
+        }
+        let mut union_box = AABB::default();
+        let mut first_box = true;
+        for object in &self.objects {
+            match object.bounding_box(t0, t1) {
+                Some(x) => {
+                    union_box = if first_box {
+                        x
+                    } else {
+                        surrounding_box(&x, &union_box)
+                    }
+                }
+                None => return None,
+            }
+        }
+        Some(union_box)
     }
 }

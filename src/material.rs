@@ -17,7 +17,7 @@ impl Lambertian {
 impl Material for Lambertian {
     fn scatter(&self, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)> {
         let scatter_direction = hit.normal + Vec3::random_unit_vector();
-        let scattered = Ray::new(hit.point, scatter_direction);
+        let scattered = Ray::new(hit.point, scatter_direction, None);
         let attenuation = self.albedo;
         Some((scattered, attenuation))
     }
@@ -39,6 +39,7 @@ impl Material for Metal {
         let scattered = Ray::new(
             hit.point,
             reflected + Vec3::random_in_unit_sphere() * self.roughness,
+            None,
         );
         let attenuation = self.albedo;
         if dot(scattered.direction(), &hit.normal) > 0.0 {
@@ -74,15 +75,15 @@ impl Material for Dielectric {
         // Total Internal Reflection
         if etai_over_etat * sin_theta > 1.0 {
             let reflected = reflect(&unit_direction, &hit.normal);
-            let scattered = Ray::new(hit.point, reflected);
+            let scattered = Ray::new(hit.point, reflected, None);
             Some((scattered, attenuation))
         } else if random_double() < reflect_prob {
             let reflected = reflect(&unit_direction, &hit.normal);
-            let scattered = Ray::new(hit.point, reflected);
+            let scattered = Ray::new(hit.point, reflected, None);
             Some((scattered, attenuation))
         } else {
             let refracted = refract(&unit_direction, &hit.normal, etai_over_etat);
-            let scattered = Ray::new(hit.point, refracted);
+            let scattered = Ray::new(hit.point, refracted, None);
             Some((scattered, attenuation))
         }
     }

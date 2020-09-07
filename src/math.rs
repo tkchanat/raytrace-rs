@@ -27,7 +27,7 @@ pub fn clamp<T: PartialOrd>(input: T, min: T, max: T) -> T {
 }
 
 // Vector3
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Vec3(f64, f64, f64);
 pub use Vec3 as Color;
 pub use Vec3 as Point3;

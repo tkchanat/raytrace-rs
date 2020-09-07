@@ -1,75 +1,22 @@
+mod camera;
 mod geometry;
 mod material;
 mod math;
 mod ray;
+mod aabb;
+use camera::*;
 use geometry::*;
 use material::*;
 use math::*;
 use ray::*;
+use aabb::*;
 use std::sync::Arc;
 
-const ASPECT_RATIO: f64 = 3.0 / 2.0;
+const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const IMAGE_WIDTH: i32 = 400;
 const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as i32;
-const SAMPLES_PER_PIXEL: i32 = 64;
+const SAMPLES_PER_PIXEL: i32 = 100;
 const MAX_DEPTH: i32 = 8;
-
-struct Camera {
-    origin: Point3,
-    lower_left_corner: Point3,
-    horizontal: Vec3,
-    vertical: Vec3,
-    u: Vec3,
-    v: Vec3,
-    w: Vec3,
-    lens_radius: f64,
-}
-// unsafe impl Sync for Camera {}
-// unsafe impl Send for Camera {}
-impl Camera {
-    fn new(
-        look_from: Point3,
-        look_at: Point3,
-        up: Vec3,
-        fov: f64,
-        aspect_ratio: f64,
-        aperture: f64,
-        focus_distance: f64,
-    ) -> Self {
-        let theta = degrees_to_radians(fov);
-        let h = (theta / 2.0).tan();
-        let viewport_height = 2.0 * h;
-        let viewport_width = aspect_ratio * viewport_height;
-
-        let w = normalize(&(look_from - look_at));
-        let u = normalize(&cross(&up, &w));
-        let v = cross(&w, &u);
-
-        let origin = look_from;
-        let horizontal = u * viewport_width * focus_distance;
-        let vertical = v * viewport_height * focus_distance;
-        let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - w * focus_distance;
-        let lens_radius = aperture / 2.0;
-        Camera {
-            origin,
-            lower_left_corner,
-            horizontal,
-            vertical,
-            u,
-            v,
-            w,
-            lens_radius,
-        }
-    }
-    fn get_ray(&self, s: f64, t: f64) -> Ray {
-        let ray_direction = Vec3::random_in_unit_disk() * self.lens_radius;
-        let offset = self.u * ray_direction.x() + self.v * ray_direction.y();
-        Ray::new(
-            self.origin + offset,
-            self.lower_left_corner + self.horizontal * s + self.vertical * t - self.origin - offset,
-        )
-    }
-}
 
 fn random_scene() -> HittableList {
     let mut world = HittableList::new();
@@ -94,7 +41,8 @@ fn random_scene() -> HittableList {
                     // diffuse
                     let albedo = Color::random() * Color::random();
                     let sphere_material = Lambertian::new(albedo);
-                    world.add(Box::new(Sphere::new(center, 0.2, sphere_material)));
+                    let center2 = center + Vec3::new(0.0, random_range_double(0.0, 0.5), 0.0);
+                    world.add(Box::new(MovingSphere::new(center, center2, 0.0, 1.0, 0.2, sphere_material)));
                 } else if choose_mat < 0.95 {
                     // metal
                     let albedo = Color::random_range(0.5, 1.0);
@@ -179,6 +127,7 @@ fn main() {
         ASPECT_RATIO,
         aperture,
         focus_distance,
+        (0.0, 1.0)
     ));
 
     // Render
