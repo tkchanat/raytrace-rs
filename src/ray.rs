@@ -35,16 +35,16 @@ pub struct RayHit<'a> {
 }
 
 // HittableList
-pub struct HittableList<T> {
-    objects: Vec<T>,
+pub struct HittableList {
+    objects: Vec<Box<dyn Hittable + Sync + Send>>,
 }
-impl<T:Hittable> HittableList<T> {
+impl HittableList {
     pub fn new() -> Self {
         HittableList {
             objects: Vec::new(),
         }
     }
-    pub fn add(&mut self, object: T) {
+    pub fn add(&mut self, object: Box<dyn Hittable + Sync + Send>) {
         self.objects.push(object);
     }
     pub fn clear(&mut self) {
