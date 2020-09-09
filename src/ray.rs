@@ -90,4 +90,10 @@ impl HittableList {
         }
         Some(union_box)
     }
+    pub fn len(&self) -> usize {
+        self.objects.len()
+    }
+    pub fn objects(self) -> Vec<Box<dyn Hittable + Sync + Send>> {
+        self.objects
+    }
 }
