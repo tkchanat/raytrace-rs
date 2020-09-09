@@ -1,4 +1,4 @@
-use crate::{math::*, ray::*};
+use crate::{math::*, ray::*, texture::*};
 
 // Traits
 pub trait Material {
@@ -6,19 +6,25 @@ pub trait Material {
 }
 
 // Lambertian
+#[derive(Clone)]
 pub struct Lambertian {
-    albedo: Color,
+    albedo: Texture,
 }
 impl Lambertian {
-    pub fn new(albedo: Color) -> Self {
-        Lambertian { albedo }
+    pub fn solid_color(albedo: Color) -> Self {
+        Lambertian {
+            albedo: Texture::SolidColor(albedo),
+        }
+    }
+    pub fn texture(texture: Texture) -> Self {
+        Lambertian { albedo: texture }
     }
 }
 impl Material for Lambertian {
     fn scatter(&self, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)> {
         let scatter_direction = hit.normal + Vec3::random_unit_vector();
         let scattered = Ray::new(hit.point, scatter_direction, None);
-        let attenuation = self.albedo;
+        let attenuation = sample_texture(&self.albedo, hit.uv.0, hit.uv.1, &hit.point);
         Some((scattered, attenuation))
     }
 }

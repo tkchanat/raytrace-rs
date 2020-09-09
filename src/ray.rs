@@ -40,6 +40,7 @@ pub struct RayHit<'a> {
     pub distance: f64,
     pub material: &'a dyn Material,
     pub normal: Vec3,
+    pub uv: (f64, f64),
     pub front_face: bool,
 }
 

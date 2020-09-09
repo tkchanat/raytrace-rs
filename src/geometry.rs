@@ -1,5 +1,14 @@
 use crate::{aabb::*, material::*, math::*, ray::*};
 
+// Helper function
+fn get_sphere_uv(p: &Vec3) -> (f64, f64) {
+    let phi = p.z().atan2(p.x());
+    let theta = p.y().asin();
+    let u = 1.0 - (phi + PI) / (2.0 * PI);
+    let v = (theta + PI / 2.0) / PI;
+    (u, v)
+}
+
 // Sphere
 pub struct Sphere<T: Material> {
     center: Point3,
@@ -36,6 +45,7 @@ impl<T: Material> Hittable for Sphere<T> {
                 distance,
                 material: &self.material,
                 normal,
+                uv: get_sphere_uv(&((point - self.center) / self.radius)),
                 front_face,
             });
         };
@@ -69,7 +79,14 @@ pub struct MovingSphere<T: Material> {
     material: T,
 }
 impl<T: Material> MovingSphere<T> {
-    pub fn new(center0: Point3, center1: Point3, time0: f64, time1: f64, radius: f64, material: T) -> Self {
+    pub fn new(
+        center0: Point3,
+        center1: Point3,
+        time0: f64,
+        time1: f64,
+        radius: f64,
+        material: T,
+    ) -> Self {
         MovingSphere {
             center0,
             center1,
@@ -80,7 +97,8 @@ impl<T: Material> MovingSphere<T> {
         }
     }
     pub fn center(&self, time: f64) -> Point3 {
-        self.center0 + (self.center1 - self.center0) * ((time - self.time0) / (self.time1 - self.time0))
+        self.center0
+            + (self.center1 - self.center0) * ((time - self.time0) / (self.time1 - self.time0))
     }
 }
 impl<T: Material> Hittable for MovingSphere<T> {
@@ -105,6 +123,7 @@ impl<T: Material> Hittable for MovingSphere<T> {
                 distance,
                 material: &self.material,
                 normal,
+                uv: get_sphere_uv(&((point - center) / self.radius)),
                 front_face,
             });
         };
