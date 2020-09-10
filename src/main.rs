@@ -1,7 +1,7 @@
-const ASPECT_RATIO: f64 = 3.0 / 2.0;
+const ASPECT_RATIO: f64 = 1.0 / 1.0;
 const IMAGE_WIDTH: i32 = 400;
 const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as i32;
-const SAMPLES_PER_PIXEL: i32 = 64;
+const SAMPLES_PER_PIXEL: i32 = 400;
 const MAX_DEPTH: i32 = 32;
 
 mod aabb;
@@ -9,10 +9,10 @@ mod camera;
 mod geometry;
 mod material;
 mod math;
-mod ray;
-mod texture;
-mod scene;
 mod noise;
+mod ray;
+mod scene;
+mod texture;
 use math::*;
 use ray::*;
 
@@ -24,19 +24,25 @@ fn write_color(color: &Color, samples_per_pixel: i32) {
     println!("{} {} {}", r as i32, g as i32, b as i32);
 }
 
-fn ray_color(ray: &Ray, world: &HittableList, depth: i32) -> Color {
+fn ray_color(ray: &Ray, background: &Color, world: &HittableList, depth: i32) -> Color {
+    // If we've exceeded the ray bounce limit, no more light is gathered.
     if depth <= 0 {
         return Color::BLACK;
     }
-    if let Some(hit) = world.hit(ray, 0.001, INIFINITY) {
-        if let Some((scattered, attenuation)) = hit.material.scatter(ray, &hit) {
-            return attenuation * ray_color(&scattered, world, depth - 1);
+    // Keep bouncing until the ray gathers enough light.
+    // If the ray hits nothing, return the background color.
+    match world.hit(ray, 0.001, INIFINITY) {
+        Some(hit) => {
+            let emitted = hit.material().emitted(hit.uv().0, hit.uv().1, hit.point());
+            match hit.material().scatter(ray, &hit) {
+                Some((scattered, attenuation)) => {
+                    emitted + attenuation * ray_color(&scattered, background, world, depth - 1)
+                }
+                None => emitted,
+            }
         }
-        return Color::BLACK;
+        None => *background,
     }
-    let unit_direction = normalize(ray.direction());
-    let t = 0.5 * (unit_direction.y() + 1.0);
-    return Color::from(1.0, 1.0, 1.0) * (1.0 - t) + Color::from(0.5, 0.7, 1.0) * t;
 }
 
 fn main() {
@@ -46,7 +52,7 @@ fn main() {
     println!("255");
 
     // World
-    let (world, camera) = scene::earth();
+    let (world, camera, background) = scene::cornell_box();
 
     // Render
     let start_time = chrono::Local::now();
@@ -62,7 +68,7 @@ fn main() {
                     let u = (i as f64 + random_double()) / (IMAGE_WIDTH - 1) as f64;
                     let v = (j as f64 + random_double()) / (IMAGE_HEIGHT - 1) as f64;
                     let ray = camera.get_ray(u, v);
-                    pixel_color = pixel_color + ray_color(&ray, &world, MAX_DEPTH)
+                    pixel_color = pixel_color + ray_color(&ray, &background, &world, MAX_DEPTH)
                 }
                 pixel_color
             });

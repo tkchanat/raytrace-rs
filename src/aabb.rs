@@ -75,7 +75,7 @@ impl BHVNode {
                 .partial_cmp(&box_b.unwrap().min()[axis])
                 .unwrap()
         };
-        objects.sort_unstable_by(comparator);
+        objects.sort_by(comparator);
         let left;
         let right;
         let object_span = objects.len();
@@ -118,7 +118,7 @@ impl Hittable for BHVNode {
         }
         let hit_left = self.left.hit(ray, t_min, t_max);
         let t = match &hit_left {
-            Some(hit) => hit.distance,
+            Some(hit) => hit.distance(),
             None => t_min,
         };
         let hit_right = self.right.hit(ray, t, t_max);

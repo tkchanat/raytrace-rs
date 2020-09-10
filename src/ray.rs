@@ -36,12 +36,55 @@ impl Ray {
 
 // RayHit
 pub struct RayHit<'a> {
-    pub point: Point3,
-    pub distance: f64,
-    pub material: &'a dyn Material,
-    pub normal: Vec3,
-    pub uv: (f64, f64),
-    pub front_face: bool,
+    point: Point3,
+    distance: f64,
+    material: &'a dyn Material,
+    normal: Vec3,
+    uv: (f64, f64),
+    front_face: bool,
+}
+impl<'a> RayHit<'a> {
+    pub fn new(
+        ray: &Ray,
+        outward_normal: Vec3,
+        distance: f64,
+        material: &'a dyn Material,
+        uv: (f64, f64),
+    ) -> Self {
+        let point = ray.at(distance);
+        let front_face = dot(ray.direction(), &outward_normal) < 0.0;
+        let normal = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
+        RayHit {
+            point,
+            distance,
+            material,
+            normal,
+            uv,
+            front_face,
+        }
+    }
+    pub fn point(&self) -> &Point3 {
+        &self.point
+    }
+    pub fn distance(&self) -> f64 {
+        self.distance
+    }
+    pub fn material(&self) -> &'a dyn Material {
+        self.material
+    }
+    pub fn normal(&self) -> &Vec3 {
+        &self.normal
+    }
+    pub fn uv(&self) -> (f64, f64) {
+        self.uv
+    }
+    pub fn front_face(&self) -> bool {
+        self.front_face
+    }
 }
 
 // HittableList

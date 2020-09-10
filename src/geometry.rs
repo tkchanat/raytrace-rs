@@ -34,20 +34,13 @@ impl<T: Material> Hittable for Sphere<T> {
         let create_hit_by_distance = |distance: f64| -> Option<RayHit> {
             let point = ray.at(distance);
             let outward_normal = (point - self.center) / self.radius;
-            let front_face = dot(ray.direction(), &outward_normal) < 0.0;
-            let normal = if front_face {
-                outward_normal
-            } else {
-                -outward_normal
-            };
-            return Some(RayHit {
-                point,
+            return Some(RayHit::new(
+                ray,
+                outward_normal,
                 distance,
-                material: &self.material,
-                normal,
-                uv: get_sphere_uv(&((point - self.center) / self.radius)),
-                front_face,
-            });
+                &self.material,
+                get_sphere_uv(&((point - self.center) / self.radius)),
+            ));
         };
         if discriminant > 0.0 {
             let alpha = (-half_b - discriminant.sqrt()) / a;
@@ -112,20 +105,13 @@ impl<T: Material> Hittable for MovingSphere<T> {
         let create_hit_by_distance = |distance: f64| -> Option<RayHit> {
             let point = ray.at(distance);
             let outward_normal = (point - center) / self.radius;
-            let front_face = dot(ray.direction(), &outward_normal) < 0.0;
-            let normal = if front_face {
-                outward_normal
-            } else {
-                -outward_normal
-            };
-            return Some(RayHit {
-                point,
+            return Some(RayHit::new(
+                ray,
+                outward_normal,
                 distance,
-                material: &self.material,
-                normal,
-                uv: get_sphere_uv(&((point - center) / self.radius)),
-                front_face,
-            });
+                &self.material,
+                get_sphere_uv(&((point - center) / self.radius)),
+            ));
         };
         if discriminant > 0.0 {
             let alpha = (-half_b - discriminant.sqrt()) / a;
@@ -149,5 +135,113 @@ impl<T: Material> Hittable for MovingSphere<T> {
             self.center1 + Vec3::new(self.radius, self.radius, self.radius),
         );
         Some(surrounding_box(&box0, &box1))
+    }
+}
+
+// XYRects
+pub struct XYRect<T: Material> {
+    x: (f64, f64),
+    y: (f64, f64),
+    k: f64,
+    material: T,
+}
+impl<T: Material> XYRect<T> {
+    pub fn new(x: (f64, f64), y: (f64, f64), k: f64, material: T) -> Self {
+        XYRect { x, y, k, material }
+    }
+}
+impl<T: Material> Hittable for XYRect<T> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit> {
+        let t = (self.k - ray.origin().z()) / ray.direction().z();
+        if t < t_min || t > t_max {
+            return None;
+        }
+        let x = ray.origin().x() + t * ray.direction().x();
+        let y = ray.origin().y() + t * ray.direction().y();
+        if x < self.x.0 || x > self.x.1 || y < self.y.0 || y > self.y.1 {
+            return None;
+        }
+        let u = (x - self.x.0) / (self.x.1 - self.x.0);
+        let v = (y - self.y.0) / (self.y.1 - self.y.0);
+        let outward_normal = Vec3::new(0.0, 0.0, 1.0);
+        Some(RayHit::new(ray, outward_normal, t, &self.material, (u, v)))
+    }
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        Some(AABB::new(
+            Point3::new(self.x.0, self.y.0, self.k - 0.0001),
+            Point3::new(self.x.1, self.y.1, self.k + 0.0001),
+        ))
+    }
+}
+
+// XZRect
+pub struct XZRect<T: Material> {
+    x: (f64, f64),
+    z: (f64, f64),
+    k: f64,
+    material: T,
+}
+impl<T: Material> XZRect<T> {
+    pub fn new(x: (f64, f64), z: (f64, f64), k: f64, material: T) -> Self {
+        XZRect { x, z, k, material }
+    }
+}
+impl<T: Material> Hittable for XZRect<T> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit> {
+        let t = (self.k - ray.origin().y()) / ray.direction().y();
+        if t < t_min || t > t_max {
+            return None;
+        }
+        let x = ray.origin().x() + t * ray.direction().x();
+        let z = ray.origin().z() + t * ray.direction().z();
+        if x < self.x.0 || x > self.x.1 || z < self.z.0 || z > self.z.1 {
+            return None;
+        }
+        let u = (x - self.x.0) / (self.x.1 - self.x.0);
+        let v = (z - self.z.0) / (self.z.1 - self.z.0);
+        let outward_normal = Vec3::new(0.0, 1.0, 0.0);
+        Some(RayHit::new(ray, outward_normal, t, &self.material, (u, v)))
+    }
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        Some(AABB::new(
+            Point3::new(self.x.0, self.k - 0.0001, self.z.0),
+            Point3::new(self.x.1, self.k + 0.0001, self.z.1),
+        ))
+    }
+}
+
+// YZRect
+pub struct YZRect<T: Material> {
+    y: (f64, f64),
+    z: (f64, f64),
+    k: f64,
+    material: T,
+}
+impl<T: Material> YZRect<T> {
+    pub fn new(y: (f64, f64), z: (f64, f64), k: f64, material: T) -> Self {
+        YZRect { y, z, k, material }
+    }
+}
+impl<T: Material> Hittable for YZRect<T> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit> {
+        let t = (self.k - ray.origin().x()) / ray.direction().x();
+        if t < t_min || t > t_max {
+            return None;
+        }
+        let y = ray.origin().y() + t * ray.direction().y();
+        let z = ray.origin().z() + t * ray.direction().z();
+        if y < self.y.0 || y > self.y.1 || z < self.z.0 || z > self.z.1 {
+            return None;
+        }
+        let u = (y - self.y.0) / (self.y.1 - self.y.0);
+        let v = (z - self.z.0) / (self.z.1 - self.z.0);
+        let outward_normal = Vec3::new(1.0, 0.0, 0.0);
+        Some(RayHit::new(ray, outward_normal, t, &self.material, (u, v)))
+    }
+    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
+        Some(AABB::new(
+            Point3::new(self.y.0, self.k - 0.0001, self.z.0),
+            Point3::new(self.y.1, self.k + 0.0001, self.z.1),
+        ))
     }
 }
