@@ -101,7 +101,7 @@ pub fn two_spheres() -> (Arc<HittableList>, Arc<Camera>) {
     let mut objects = HittableList::new();
 
     let perlin = Perlin::new();
-    let checker = Lambertian::texture(Texture::Perlin(perlin, 4.0));
+    let checker = Lambertian::texture(Texture::Marble(perlin, 4.0));
     objects.add(Box::new(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
         1000.0,
