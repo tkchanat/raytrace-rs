@@ -5,7 +5,7 @@ use crate::{math::*, noise::*};
 pub enum Texture {
     SolidColor(Color),
     Checker(Color, Color),
-    Noise(Perlin),
+    Perlin(Perlin, f64),
 }
 pub fn sample_texture(texture: &Texture, u: f64, v: f64, p: &Point3) -> Color {
     match texture {
@@ -18,7 +18,7 @@ pub fn sample_texture(texture: &Texture, u: f64, v: f64, p: &Point3) -> Color {
                 *even
             }
         }
-        Texture::Noise(noise) => Color::WHITE * noise.noise(p),
+        Texture::Perlin(noise, scale) => Color::WHITE * 0.5 * (1.0 + noise.noise(&(*p * *scale))),
         _ => Color::BLACK,
     }
 }
