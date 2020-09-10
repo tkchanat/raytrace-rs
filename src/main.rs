@@ -46,7 +46,7 @@ fn main() {
     println!("255");
 
     // World
-    let (world, camera) = scene::two_spheres();
+    let (world, camera) = scene::earth();
 
     // Render
     let start_time = chrono::Local::now();

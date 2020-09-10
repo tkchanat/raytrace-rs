@@ -38,6 +38,12 @@ pub use Vec3 as Point3;
 impl Vec3 {
     // Constants
     pub const BLACK: Color = Color(0.0, 0.0, 0.0);
+    pub const RED: Color = Color(1.0, 0.0, 0.0);
+    pub const GREEN: Color = Color(0.0, 1.0, 0.0);
+    pub const BLUE: Color = Color(0.0, 0.0, 1.0);
+    pub const YELLOW: Color = Color(1.0, 1.0, 0.0);
+    pub const CYAN: Color = Color(0.0, 1.0, 1.0);
+    pub const MAGENTA: Color = Color(1.0, 0.0, 1.0);
     pub const WHITE: Color = Color(1.0, 1.0, 1.0);
     pub const UP: Vec3 = Vec3(0.0, 1.0, 0.0);
 

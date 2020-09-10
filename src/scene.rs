@@ -1,9 +1,4 @@
-use crate::camera::*;
-use crate::geometry::*;
-use crate::material::*;
-use crate::math::*;
-use crate::ray::*;
-use crate::{noise::*, texture::*};
+use crate::{camera::*, geometry::*, material::*, math::*, noise::*, ray::*, texture::*};
 use std::sync::Arc;
 
 pub fn ballz() -> (Arc<HittableList>, Arc<Camera>) {
@@ -100,6 +95,43 @@ pub fn two_spheres() -> (Arc<HittableList>, Arc<Camera>) {
     // World
     let mut objects = HittableList::new();
 
+    let checker = Lambertian::texture(Texture::Checker(
+        Color::new(0.2, 0.3, 0.1),
+        Color::new(0.9, 0.9, 0.9),
+    ));
+    objects.add(Box::new(Sphere::new(
+        Point3::new(0.0, -10.0, 0.0),
+        10.0,
+        checker.clone(),
+    )));
+    objects.add(Box::new(Sphere::new(
+        Point3::new(0.0, 10.0, 0.0),
+        10.0,
+        checker.clone(),
+    )));
+
+    // Camera
+    let look_from = Point3::new(13.0, 2.0, 3.0);
+    let look_at = Point3::new(0.0, 0.0, 0.0);
+    let focus_distance = 10.0;
+    let aperture = 0.0;
+    let camera = Camera::new(
+        look_from,
+        look_at,
+        Vec3::UP,
+        20.0,
+        crate::ASPECT_RATIO,
+        aperture,
+        focus_distance,
+        (0.0, 1.0),
+    );
+    (Arc::new(objects), Arc::new(camera))
+}
+
+pub fn two_perlin_spheres() -> (Arc<HittableList>, Arc<Camera>) {
+    // World
+    let mut objects = HittableList::new();
+
     let perlin = Perlin::new();
     let checker = Lambertian::texture(Texture::Marble(perlin, 4.0));
     objects.add(Box::new(Sphere::new(
@@ -113,6 +145,32 @@ pub fn two_spheres() -> (Arc<HittableList>, Arc<Camera>) {
         checker.clone(),
     )));
 
+    // Camera
+    let look_from = Point3::new(13.0, 2.0, 3.0);
+    let look_at = Point3::new(0.0, 0.0, 0.0);
+    let focus_distance = 10.0;
+    let aperture = 0.0;
+    let camera = Camera::new(
+        look_from,
+        look_at,
+        Vec3::UP,
+        20.0,
+        crate::ASPECT_RATIO,
+        aperture,
+        focus_distance,
+        (0.0, 1.0),
+    );
+    (Arc::new(objects), Arc::new(camera))
+}
+
+pub fn earth() -> (Arc<HittableList>, Arc<Camera>) {
+    // World
+    let mut objects = HittableList::new();
+
+    let earth_texture = Image::new("earthmap.jpg");
+    let earth_material = Lambertian::texture(Texture::Image(earth_texture));
+    let globe = Box::new(Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, earth_material));
+    objects.add(globe);
     // Camera
     let look_from = Point3::new(13.0, 2.0, 3.0);
     let look_at = Point3::new(0.0, 0.0, 0.0);
