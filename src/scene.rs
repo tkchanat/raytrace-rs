@@ -3,7 +3,7 @@ use crate::geometry::*;
 use crate::material::*;
 use crate::math::*;
 use crate::ray::*;
-use crate::texture::*;
+use crate::{noise::*, texture::*};
 use std::sync::Arc;
 
 pub fn ballz() -> (Arc<HittableList>, Arc<Camera>) {
@@ -100,9 +100,18 @@ pub fn two_spheres() -> (Arc<HittableList>, Arc<Camera>) {
     // World
     let mut objects = HittableList::new();
 
-    let checker = Lambertian::texture(Texture::Checker(Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9)));
-    objects.add(Box::new(Sphere::new(Point3::new(0.0,-10.0, 0.0), 10.0, checker.clone())));
-    objects.add(Box::new(Sphere::new(Point3::new(0.0, 10.0, 0.0), 10.0, checker.clone())));
+    let perlin = Perlin::new();
+    let checker = Lambertian::texture(Texture::Noise(perlin));
+    objects.add(Box::new(Sphere::new(
+        Point3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        checker.clone(),
+    )));
+    objects.add(Box::new(Sphere::new(
+        Point3::new(0.0, 2.0, 0.0),
+        2.0,
+        checker.clone(),
+    )));
 
     // Camera
     let look_from = Point3::new(13.0, 2.0, 3.0);

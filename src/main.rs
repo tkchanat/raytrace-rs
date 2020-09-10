@@ -12,6 +12,7 @@ mod math;
 mod ray;
 mod texture;
 mod scene;
+mod noise;
 use math::*;
 use ray::*;
 
