@@ -11,6 +11,11 @@ pub enum Texture {
     Marble(Perlin, f64),
     Image(Image),
 }
+impl From<Color> for Texture {
+    fn from(color: Color) -> Texture {
+        Texture::SolidColor(color)
+    }
+}
 pub fn sample_texture(texture: &Texture, u: f64, v: f64, p: &Point3) -> Color {
     match texture {
         Texture::SolidColor(color_value) => *color_value,
@@ -43,8 +48,8 @@ pub fn sample_texture(texture: &Texture, u: f64, v: f64, p: &Point3) -> Color {
             let color_scale = 1.0 / 255.0;
             let pixel = j as usize * image.bytes_per_scanline + i as usize * Image::BYTES_PER_PIXEL;
             let r = color_scale * image.data[pixel] as f64;
-            let g = color_scale * image.data[pixel+1] as f64;
-            let b = color_scale * image.data[pixel+2] as f64;
+            let g = color_scale * image.data[pixel + 1] as f64;
+            let b = color_scale * image.data[pixel + 2] as f64;
             Color::new(r, g, b)
         }
         _ => Color::BLACK,

@@ -1,12 +1,13 @@
 use crate::{aabb::*, material::*, math::*};
 
-// Traits
-pub trait Hittable {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit>;
-    fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB>;
-}
+// // Traits
+// pub trait Hittable {
+//     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit>;
+//     fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB>;
+// }
 
 // Ray
+#[derive(Copy, Clone)]
 pub struct Ray {
     orig: Point3,
     dir: Vec3,
@@ -38,7 +39,7 @@ impl Ray {
 pub struct RayHit<'a> {
     point: Point3,
     distance: f64,
-    material: &'a dyn Material,
+    material: &'a Material,
     normal: Vec3,
     uv: (f64, f64),
     front_face: bool,
@@ -48,7 +49,7 @@ impl<'a> RayHit<'a> {
         ray: &Ray,
         outward_normal: Vec3,
         distance: f64,
-        material: &'a dyn Material,
+        material: &'a Material,
         uv: (f64, f64),
     ) -> Self {
         let point = ray.at(distance);
@@ -73,7 +74,7 @@ impl<'a> RayHit<'a> {
     pub fn distance(&self) -> f64 {
         self.distance
     }
-    pub fn material(&self) -> &'a dyn Material {
+    pub fn material(&self) -> &'a Material {
         self.material
     }
     pub fn normal(&self) -> &Vec3 {
@@ -84,60 +85,5 @@ impl<'a> RayHit<'a> {
     }
     pub fn front_face(&self) -> bool {
         self.front_face
-    }
-}
-
-// HittableList
-pub struct HittableList {
-    objects: Vec<Box<dyn Hittable + Sync + Send>>,
-}
-impl HittableList {
-    pub fn new() -> Self {
-        HittableList {
-            objects: Vec::new(),
-        }
-    }
-    pub fn add(&mut self, object: Box<dyn Hittable + Sync + Send>) {
-        self.objects.push(object);
-    }
-    pub fn clear(&mut self) {
-        self.objects.clear();
-    }
-    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit> {
-        let mut closest_hit = None;
-        let mut closest_distance = t_max;
-        for object in &self.objects {
-            if let Some(hit) = object.hit(ray, t_min, closest_distance) {
-                closest_distance = hit.distance;
-                closest_hit = Some(hit);
-            }
-        }
-        closest_hit
-    }
-    pub fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
-        if self.objects.is_empty() {
-            return None;
-        }
-        let mut union_box = AABB::default();
-        let mut first_box = true;
-        for object in &self.objects {
-            match object.bounding_box(t0, t1) {
-                Some(x) => {
-                    union_box = if first_box {
-                        x
-                    } else {
-                        surrounding_box(&x, &union_box)
-                    }
-                }
-                None => return None,
-            }
-        }
-        Some(union_box)
-    }
-    pub fn len(&self) -> usize {
-        self.objects.len()
-    }
-    pub fn objects(self) -> Vec<Box<dyn Hittable + Sync + Send>> {
-        self.objects
     }
 }

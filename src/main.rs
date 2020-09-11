@@ -13,8 +13,7 @@ mod noise;
 mod ray;
 mod scene;
 mod texture;
-use math::*;
-use ray::*;
+use {camera::*, geometry::*, material::*, math::*, ray::*};
 
 fn write_color(color: &Color, samples_per_pixel: i32) {
     let scale = 1.0 / samples_per_pixel as f64;
@@ -33,8 +32,8 @@ fn ray_color(ray: &Ray, background: &Color, world: &HittableList, depth: i32) ->
     // If the ray hits nothing, return the background color.
     match world.hit(ray, 0.001, INIFINITY) {
         Some(hit) => {
-            let emitted = hit.material().emitted(hit.uv().0, hit.uv().1, hit.point());
-            match hit.material().scatter(ray, &hit) {
+            let emitted = emitted(hit.material(), hit.uv().0, hit.uv().1, hit.point());
+            match scatter(hit.material(), ray, &hit) {
                 Some((scattered, attenuation)) => {
                     emitted + attenuation * ray_color(&scattered, background, world, depth - 1)
                 }
@@ -60,14 +59,13 @@ fn main() {
         let mut threads = Vec::new();
         eprintln!("Scan line {} / {}", IMAGE_HEIGHT - j, IMAGE_HEIGHT);
         for i in 0..IMAGE_WIDTH {
-            let camera = camera.clone();
+            let u = (i as f64 + random_double()) / (IMAGE_WIDTH - 1) as f64;
+            let v = (j as f64 + random_double()) / (IMAGE_HEIGHT - 1) as f64;
+            let ray = camera.get_ray(u, v);
             let world = world.clone();
             let handle = std::thread::spawn(move || -> Color {
                 let mut pixel_color = Color::BLACK;
                 for _ in 0..SAMPLES_PER_PIXEL {
-                    let u = (i as f64 + random_double()) / (IMAGE_WIDTH - 1) as f64;
-                    let v = (j as f64 + random_double()) / (IMAGE_HEIGHT - 1) as f64;
-                    let ray = camera.get_ray(u, v);
                     pixel_color = pixel_color + ray_color(&ray, &background, &world, MAX_DEPTH)
                 }
                 pixel_color
