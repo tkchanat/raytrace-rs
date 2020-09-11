@@ -16,7 +16,10 @@ pub enum Hittable {
     XYRect((f64, f64), (f64, f64), f64, Material),
     YZRect((f64, f64), (f64, f64), f64, Material),
     XZRect((f64, f64), (f64, f64), f64, Material),
+    Cube(Cuboid),
     BHVNode(Box<BHVNode>),
+    Translate(Box<Hittable>, Vec3),
+    RotateY(Box<Hittable>, f64),
 }
 pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit<'a>> {
     match obj {
@@ -31,9 +34,10 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
                 let outward_normal = (point - *center) / *radius;
                 return Some(RayHit::new(
                     ray,
-                    outward_normal,
+                    point,
                     distance,
                     &material,
+                    outward_normal,
                     get_sphere_uv(&((point - *center) / *radius)),
                 ));
             };
@@ -64,9 +68,10 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
                 let outward_normal = (point - center) / *radius;
                 return Some(RayHit::new(
                     ray,
-                    outward_normal,
+                    point,
                     distance,
                     &material,
+                    outward_normal,
                     get_sphere_uv(&((point - center) / *radius)),
                 ));
             };
@@ -95,7 +100,14 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
             let u = (x - *x0) / (*x1 - *x0);
             let v = (y - *y0) / (*y1 - *y0);
             let outward_normal = Vec3::new(0.0, 0.0, 1.0);
-            Some(RayHit::new(ray, outward_normal, t, &material, (u, v)))
+            Some(RayHit::new(
+                ray,
+                ray.at(t),
+                t,
+                &material,
+                outward_normal,
+                (u, v),
+            ))
         }
         Hittable::XZRect((x0, x1), (z0, z1), k, material) => {
             let t = (k - ray.origin().y()) / ray.direction().y();
@@ -110,7 +122,14 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
             let u = (x - *x0) / (*x1 - *x0);
             let v = (z - *z0) / (*z1 - *z0);
             let outward_normal = Vec3::new(0.0, 1.0, 0.0);
-            Some(RayHit::new(ray, outward_normal, t, &material, (u, v)))
+            Some(RayHit::new(
+                ray,
+                ray.at(t),
+                t,
+                &material,
+                outward_normal,
+                (u, v),
+            ))
         }
         Hittable::YZRect((y0, y1), (z0, z1), k, material) => {
             let t = (k - ray.origin().x()) / ray.direction().x();
@@ -125,8 +144,16 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
             let u = (y - *y0) / (*y1 - *y0);
             let v = (z - *z0) / (*z1 - *z0);
             let outward_normal = Vec3::new(1.0, 0.0, 0.0);
-            Some(RayHit::new(ray, outward_normal, t, &material, (u, v)))
+            Some(RayHit::new(
+                ray,
+                ray.at(t),
+                t,
+                &material,
+                outward_normal,
+                (u, v),
+            ))
         }
+        Hittable::Cube(cuboid) => cuboid.sides().hit(ray, t_min, t_max),
         Hittable::BHVNode(node) => {
             if node.hit_check(ray, t_min, t_max) {
                 return None;
@@ -143,6 +170,52 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
                 return hit_right;
             }
             None
+        }
+        Hittable::Translate(object, offset) => {
+            let moved_r = Ray::new(*ray.origin() - *offset, *ray.direction(), Some(ray.time()));
+            if let Some(hit) = ray_cast(object, &moved_r, t_min, t_max) {
+                return Some(RayHit::new(
+                    &moved_r,
+                    *hit.point() + *offset,
+                    hit.distance(),
+                    hit.material(),
+                    *hit.normal(),
+                    hit.uv(),
+                ));
+            }
+            None
+        }
+        Hittable::RotateY(object, degree) => {
+            let mut origin = *ray.origin();
+            let mut direction = *ray.direction();
+            let radians = degrees_to_radians(*degree);
+            let sin_theta = radians.sin();
+            let cos_theta = radians.cos();
+            origin[0] = cos_theta * ray.origin()[0] - sin_theta * ray.origin()[2];
+            origin[2] = sin_theta * ray.origin()[0] + cos_theta * ray.origin()[2];
+            direction[0] = cos_theta * ray.direction()[0] - sin_theta * ray.direction()[2];
+            direction[2] = sin_theta * ray.direction()[0] + cos_theta * ray.direction()[2];
+
+            let rotated_r = Ray::new(origin, direction, Some(ray.time()));
+            match ray_cast(object, &rotated_r, t_min, t_max) {
+                Some(hit) => {
+                    let mut p = *hit.point();
+                    let mut normal = *hit.normal();
+                    p[0] = cos_theta * hit.point()[0] + sin_theta * hit.point()[2];
+                    p[2] = -sin_theta * hit.point()[0] + cos_theta * hit.point()[2];
+                    normal[0] = cos_theta * hit.normal()[0] + sin_theta * hit.normal()[2];
+                    normal[2] = -sin_theta * hit.normal()[0] + cos_theta * hit.normal()[2];
+                    Some(RayHit::new(
+                        &rotated_r,
+                        p,
+                        (p - origin).length(),
+                        hit.material(),
+                        normal,
+                        hit.uv(),
+                    ))
+                }
+                None => None,
+            }
         }
         _ => panic!("What are you expecting me to do with this hittable object!??"),
     }
@@ -176,7 +249,47 @@ pub fn get_bounding_box(obj: &Hittable, t0: f64, t1: f64) -> Option<AABB> {
             Point3::new(k - 0.0001, *y0, *z0),
             Point3::new(k + 0.0001, *y1, *z1),
         )),
+        Hittable::Cube(cuboid) => Some(AABB::new(*cuboid.min(), *cuboid.max())),
         Hittable::BHVNode(node) => Some(node.bounding_box().clone()),
+        Hittable::Translate(object, offset) => match get_bounding_box(object, t0, t1) {
+            Some(bounding_box) => Some(AABB::new(
+                *bounding_box.min() + *offset,
+                *bounding_box.max() + *offset,
+            )),
+            None => None,
+        },
+        Hittable::RotateY(object, degree) => {
+            let radians = degrees_to_radians(*degree);
+            let sin_theta = radians.sin();
+            let cos_theta = radians.cos();
+            match get_bounding_box(object, 0.0, 1.0) {
+                Some(bounding_box) => {
+                    let mut min = Point3::new(INIFINITY, INIFINITY, INIFINITY);
+                    let mut max = Point3::new(-INIFINITY, -INIFINITY, -INIFINITY);
+                    for i in 0..2 {
+                        for j in 0..2 {
+                            for k in 0..2 {
+                                let x = i as f64 * bounding_box.max().x()
+                                    + (1 - i) as f64 * bounding_box.min().x();
+                                let y = j as f64 * bounding_box.max().y()
+                                    + (1 - j) as f64 * bounding_box.min().y();
+                                let z = k as f64 * bounding_box.max().z()
+                                    + (1 - k) as f64 * bounding_box.min().z();
+                                let newx = cos_theta * x + sin_theta * z;
+                                let newz = -sin_theta * x + cos_theta * z;
+                                let tester = Vec3::new(newx, y, newz);
+                                for c in 0..3 {
+                                    min[c] = min[c].min(tester[c]);
+                                    max[c] = max[c].max(tester[c]);
+                                }
+                            }
+                        }
+                    }
+                    Some(AABB::new(min, max))
+                }
+                None => None,
+            }
+        }
         _ => panic!("What are you expecting me to do with this hittable object!??"),
     }
 }
@@ -236,78 +349,59 @@ impl HittableList {
     }
 }
 
-// Cube
-// pub struct Cube {
-//     box_min: Point3,
-//     box_max: Point3,
-//     sides: HittableList,
-// }
-// impl Cube {
-//     pub fn new(p0: Point3, p1: Point3, material: Box::<dyn Material>) -> Self {
-//         let mut sides = HittableList::new();
-//         sides.add(Box::new(XYRect::new(
-//             (p0.x(), p1.x()),
-//             (p0.y(), p1.y()),
-//             p1.z(),
-//             material,
-//         )));
-//         // sides.add(Box::new(XYRect::new(
-//         //     (p0.x(), p1.x()),
-//         //     (p0.y(), p1.y()),
-//         //     p0.z(),
-//         //     material.clone(),
-//         // )));
-//         // sides.add(Box::new(XZRect::new(
-//         //     (p0.x(), p1.x()),
-//         //     (p0.z(), p1.z()),
-//         //     p1.y(),
-//         //     material.clone(),
-//         // )));
-//         // sides.add(Box::new(XZRect::new(
-//         //     (p0.x(), p1.x()),
-//         //     (p0.z(), p1.z()),
-//         //     p0.y(),
-//         //     material.clone(),
-//         // )));
-//         // sides.add(Box::new(YZRect::new(
-//         //     (p0.y(), p1.y()),
-//         //     (p0.z(), p1.z()),
-//         //     p1.x(),
-//         //     material.clone(),
-//         // )));
-//         // sides.add(Box::new(YZRect::new(
-//         //     (p0.y(), p1.y()),
-//         //     (p0.z(), p1.z()),
-//         //     p0.x(),
-//         //     material.clone(),
-//         // )));
-//         Cube {
-//             box_min: p0,
-//             box_max: p1,
-//             sides,
-//         }
-//     }
-// }
-// impl Hittable for Cube {
-//     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit> {
-//         let t = (self.k - ray.origin().x()) / ray.direction().x();
-//         if t < t_min || t > t_max {
-//             return None;
-//         }
-//         let y = ray.origin().y() + t * ray.direction().y();
-//         let z = ray.origin().z() + t * ray.direction().z();
-//         if y < self.*y0 || y > self.*y1 || z < self.*z0 || z > self.*z1 {
-//             return None;
-//         }
-//         let u = (y - self.*y0) / (self.*y1 - self.*y0);
-//         let v = (z - self.*z0) / (self.*z1 - self.*z0);
-//         let outward_normal = Vec3::new(1.0, 0.0, 0.0);
-//         Some(RayHit::new(ray, outward_normal, t, &self.material, (u, v)))
-//     }
-//     fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB> {
-//         Some(AABB::new(
-//             Point3::new(self.*y0, self.k - 0.0001, self.*z0),
-//             Point3::new(self.*y1, self.k + 0.0001, self.*z1),
-//         ))
-//     }
-// }
+pub struct Cuboid {
+    min: Point3,
+    max: Point3,
+    sides: HittableList,
+}
+impl Cuboid {
+    pub fn new(min: Point3, max: Point3, material: Material) -> Self {
+        let mut sides = HittableList::new();
+        sides.add(Hittable::XYRect(
+            (min.x(), max.x()),
+            (min.y(), max.y()),
+            max.z(),
+            material.clone(),
+        ));
+        sides.add(Hittable::XYRect(
+            (min.x(), max.x()),
+            (min.y(), max.y()),
+            min.z(),
+            material.clone(),
+        ));
+        sides.add(Hittable::XZRect(
+            (min.x(), max.x()),
+            (min.z(), max.z()),
+            max.y(),
+            material.clone(),
+        ));
+        sides.add(Hittable::XZRect(
+            (min.x(), max.x()),
+            (min.z(), max.z()),
+            min.y(),
+            material.clone(),
+        ));
+        sides.add(Hittable::YZRect(
+            (min.y(), max.y()),
+            (min.z(), max.z()),
+            max.x(),
+            material.clone(),
+        ));
+        sides.add(Hittable::YZRect(
+            (min.y(), max.y()),
+            (min.z(), max.z()),
+            min.x(),
+            material.clone(),
+        ));
+        Cuboid { min, max, sides }
+    }
+    pub fn min(&self) -> &Point3 {
+        &self.min
+    }
+    pub fn max(&self) -> &Point3 {
+        &self.max
+    }
+    pub fn sides(&self) -> &HittableList {
+        &self.sides
+    }
+}

@@ -273,6 +273,22 @@ pub fn cornell_box() -> (Arc<HittableList>, Arc<Camera>, Color) {
         555.0,
         white.clone(),
     ));
+    let mut box1 = Hittable::Cube(Cuboid::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 330.0, 165.0),
+        white.clone(),
+    ));
+    box1 = Hittable::RotateY(Box::new(box1), 15.0);
+    box1 = Hittable::Translate(Box::new(box1), Vec3::new(265.0, 0.0, 295.0));
+    objects.add(box1);
+    let mut box2 = Hittable::Cube(Cuboid::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 165.0, 165.0),
+        white.clone(),
+    ));
+    box2 = Hittable::RotateY(Box::new(box2), -18.0);
+    box2 = Hittable::Translate(Box::new(box2), Vec3::new(130.0, 0.0, 65.0));
+    objects.add(box2);
 
     // Camera
     let look_from = Point3::new(278.0, 278.0, -800.0);

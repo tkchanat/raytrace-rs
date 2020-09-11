@@ -1,11 +1,5 @@
 use crate::{aabb::*, material::*, math::*};
 
-// // Traits
-// pub trait Hittable {
-//     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit>;
-//     fn bounding_box(&self, t0: f64, t1: f64) -> Option<AABB>;
-// }
-
 // Ray
 #[derive(Copy, Clone)]
 pub struct Ray {
@@ -47,12 +41,12 @@ pub struct RayHit<'a> {
 impl<'a> RayHit<'a> {
     pub fn new(
         ray: &Ray,
-        outward_normal: Vec3,
+        point: Point3,
         distance: f64,
         material: &'a Material,
+        outward_normal: Vec3,
         uv: (f64, f64),
     ) -> Self {
-        let point = ray.at(distance);
         let front_face = dot(ray.direction(), &outward_normal) < 0.0;
         let normal = if front_face {
             outward_normal
