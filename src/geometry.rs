@@ -17,9 +17,10 @@ pub enum Hittable {
     YZRect((f64, f64), (f64, f64), f64, Material),
     XZRect((f64, f64), (f64, f64), f64, Material),
     Cube(Cuboid),
-    BHVNode(Box<BHVNode>),
+    BHVNode(AABB, Box<Hittable>, Box<Hittable>),
     Translate(Box<Hittable>, Vec3),
     RotateY(Box<Hittable>, f64),
+    ConstantMedium(Box<Hittable>, f64, Material),
 }
 pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Option<RayHit<'a>> {
     match obj {
@@ -154,16 +155,16 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
             ))
         }
         Hittable::Cube(cuboid) => cuboid.sides().hit(ray, t_min, t_max),
-        Hittable::BHVNode(node) => {
-            if node.hit_check(ray, t_min, t_max) {
+        Hittable::BHVNode(aabb, left, right) => {
+            if !aabb.hit(ray, t_min, t_max) {
                 return None;
             }
-            let hit_left = ray_cast(node.left(), ray, t_min, t_max);
+            let hit_left = ray_cast(left, ray, t_min, t_max);
             let t = match &hit_left {
                 Some(hit) => hit.distance(),
                 None => t_min,
             };
-            let hit_right = ray_cast(node.right(), ray, t, t_max);
+            let hit_right = ray_cast(right, ray, t, t_max);
             if hit_left.is_some() {
                 return hit_left;
             } else if hit_right.is_some() {
@@ -186,8 +187,8 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
             None
         }
         Hittable::RotateY(object, degree) => {
-            let mut origin = *ray.origin();
-            let mut direction = *ray.direction();
+            let mut origin = ray.origin().clone();
+            let mut direction = ray.direction().clone();
             let radians = degrees_to_radians(*degree);
             let sin_theta = radians.sin();
             let cos_theta = radians.cos();
@@ -208,11 +209,56 @@ pub fn ray_cast<'a>(obj: &'a Hittable, ray: &Ray, t_min: f64, t_max: f64) -> Opt
                     Some(RayHit::new(
                         &rotated_r,
                         p,
-                        (p - origin).length(),
+                        (p - ray.origin().clone()).length(),
                         hit.material(),
                         normal,
                         hit.uv(),
                     ))
+                }
+                None => None,
+            }
+        }
+        Hittable::ConstantMedium(object, density, material) => {
+            // Print occasional samples when debugging. To enable, set enableDebug true.
+            const ENABLE_DEBUG: bool = false;
+            let debugging: bool = ENABLE_DEBUG && random_double() < 0.00001;
+            let neg_inv_density: f64 = -1.0 / *density;
+            match ray_cast(object, ray, -INIFINITY, INIFINITY) {
+                Some(hit1) => {
+                    match ray_cast(object, ray, hit1.distance() + 0.0001, INIFINITY) {
+                        Some(hit2) => {
+                            if debugging {
+                                eprintln!("t0={}, t1={}", hit1.distance(), hit2.distance());
+                            }
+                            let mut t1 = hit1.distance();
+                            let mut t2 = hit2.distance();
+                            t1 = clamp(t1, t_min, t1);
+                            t2 = clamp(t2, t2, t_max);
+                            if t1 >= t2 {
+                                return None;
+                            }
+                            t1 = clamp(t1, 0.0, t1);
+                            let ray_length = ray.direction().length();
+                            let distance_inside_boundary = (t2 - t1) * ray_length;
+                            let hit_distance = neg_inv_density * random_double().ln();
+                            if hit_distance > distance_inside_boundary {
+                                return None;
+                            }
+                            let t = t1 + hit_distance / ray_length;
+                            let normal = Vec3::default(); // arbitrary
+                            let uv = (0.0, 0.0); // arbitrary
+                            if debugging {
+                                eprintln!(
+                                    "hit_distance={}, hit.distance={:?}, hit.point={:?}",
+                                    hit_distance,
+                                    t,
+                                    ray.at(t)
+                                );
+                            }
+                            Some(RayHit::new(ray, ray.at(t), t, material, normal, uv))
+                        }
+                        None => None,
+                    }
                 }
                 None => None,
             }
@@ -250,7 +296,7 @@ pub fn get_bounding_box(obj: &Hittable, t0: f64, t1: f64) -> Option<AABB> {
             Point3::new(k + 0.0001, *y1, *z1),
         )),
         Hittable::Cube(cuboid) => Some(AABB::new(*cuboid.min(), *cuboid.max())),
-        Hittable::BHVNode(node) => Some(node.bounding_box().clone()),
+        Hittable::BHVNode(aabb, left, right) => Some(aabb.clone()),
         Hittable::Translate(object, offset) => match get_bounding_box(object, t0, t1) {
             Some(bounding_box) => Some(AABB::new(
                 *bounding_box.min() + *offset,
@@ -290,6 +336,7 @@ pub fn get_bounding_box(obj: &Hittable, t0: f64, t1: f64) -> Option<AABB> {
                 None => None,
             }
         }
+        Hittable::ConstantMedium(object, density, material) => get_bounding_box(object, t0, t1),
         _ => panic!("What are you expecting me to do with this hittable object!??"),
     }
 }
@@ -341,11 +388,57 @@ impl HittableList {
         }
         Some(union_box)
     }
-    pub fn len(&self) -> usize {
-        self.objects.len()
+    pub fn to_bhv(self, time0: f64, time1: f64) -> Hittable {
+        HittableList::construct_bhv(self.objects, time0, time1)
     }
-    pub fn objects(self) -> Vec<Hittable> {
-        self.objects
+    fn construct_bhv(mut objects: Vec<Hittable>, time0: f64, time1: f64) -> Hittable {
+        let axis = random_range_int(0, 2);
+        let comparator = |a: &Hittable, b: &Hittable| -> std::cmp::Ordering {
+            let box_a = get_bounding_box(a, time0, time1);
+            let box_b = get_bounding_box(b, time0, time1);
+            if box_a.is_none() || box_b.is_none() {
+                panic!("No bounding box in BVHNode constructor!");
+            }
+            box_a.unwrap().min()[axis]
+                .partial_cmp(&box_b.unwrap().min()[axis])
+                .unwrap()
+        };
+        objects.sort_by(comparator);
+        let left;
+        let right;
+        let object_span = objects.len();
+        //eprintln!("object_span: {}", object_span);
+        match object_span {
+            0 => panic!("No objects in leaf node!"),
+            1 => objects.remove(0),
+            2 => {
+                right = objects.remove(1);
+                left = objects.remove(0);
+                Hittable::BHVNode(
+                    surrounding_box(
+                        &get_bounding_box(&left, time0, time1).unwrap(),
+                        &get_bounding_box(&right, time0, time1).unwrap(),
+                    ),
+                    Box::new(left),
+                    Box::new(right),
+                )
+            }
+            _ => {
+                let mut vec_right = objects;
+                let vec_left = vec_right.split_off(object_span / 2);
+                //eprintln!("vec_left: {}, vec_right: {}", vec_left.len(), vec_right.len());
+                left = HittableList::construct_bhv(vec_left, time0, time1);
+                right = HittableList::construct_bhv(vec_right, time0, time1);
+                Hittable::BHVNode(
+                    surrounding_box(
+                        &get_bounding_box(&left, time0, time1).unwrap(),
+                        &get_bounding_box(&right, time0, time1).unwrap(),
+                    ),
+                    Box::new(left),
+                    Box::new(right),
+                )
+            }
+        }
     }
 }
 

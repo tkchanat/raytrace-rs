@@ -1,7 +1,7 @@
 const ASPECT_RATIO: f64 = 1.0 / 1.0;
-const IMAGE_WIDTH: i32 = 400;
+const IMAGE_WIDTH: i32 = 800;
 const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as i32;
-const SAMPLES_PER_PIXEL: i32 = 400;
+const SAMPLES_PER_PIXEL: i32 = 800;
 const MAX_DEPTH: i32 = 32;
 
 mod aabb;
@@ -51,7 +51,7 @@ fn main() {
     println!("255");
 
     // World
-    let (world, camera, background) = scene::cornell_box();
+    let (world, camera, background) = scene::final_scene();
 
     // Render
     let start_time = chrono::Local::now();

@@ -6,6 +6,7 @@ pub enum Material {
     Metal(Color, f64),
     Dielectric(f64),
     DiffuseLight(Texture),
+    Isotropic(Texture),
 }
 
 pub fn scatter(material: &Material, ray: &Ray, hit: &RayHit) -> Option<(Ray, Color)> {
@@ -56,6 +57,15 @@ pub fn scatter(material: &Material, ray: &Ray, hit: &RayHit) -> Option<(Ray, Col
                 let scattered = Ray::new(*hit.point(), refracted, None);
                 Some((scattered, attenuation))
             }
+        }
+        Material::Isotropic(texture) => {
+            let scattered = Ray::new(
+                *hit.point(),
+                Vec3::random_in_unit_sphere(),
+                Some(ray.time()),
+            );
+            let attenuation = sample_texture(texture, hit.uv().0, hit.uv().1, hit.point());
+            Some((scattered, attenuation))
         }
         _ => None,
     }

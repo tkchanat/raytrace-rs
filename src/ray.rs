@@ -11,7 +11,7 @@ impl Ray {
     pub fn new(orig: Point3, dir: Vec3, time: Option<f64>) -> Self {
         Ray {
             orig,
-            dir,
+            dir: normalize(&dir),
             time: time.unwrap_or_default(),
         }
     }
